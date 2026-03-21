@@ -27,29 +27,40 @@ def load_projects():
 
 data = load_projects()
 
+# Color por categoria
+CATEGORY_COLORS = {
+    "Computer Vision":  "#1a1a1a",
+    "Text Analysis":    "#2d4a3e",
+    "Translation":      "#3a2d4a",
+    "Machine Learning": "#4a2d2d",
+    "NLP":              "#2d3a4a",
+    "Sentiment Analysis":"#4a3a2d",
+    "OCR":              "#2d4a4a",
+    "Data Analysis":    "#3a4a2d",
+    "Streamlit":        "#4a2d3a",
+}
+
+def get_color(category):
+    return CATEGORY_COLORS.get(category, "#1a1a1a")
+
 def render_card(project, index):
     num_str = str(index).zfill(2)
-    url = project["url"]
-    thumb = f"https://shot.screenshotapi.net/screenshot?token=free&url={url}&width=800&height=450&output=image&file_type=jpeg&delay=0&retina=false&quality=60"
     desc = project.get("description", "")
-    desc_html = f'<div class="card-desc">{desc}</div>' if desc else ""
+    desc_html = f'<p class="card-desc">{desc}</p>' if desc else ""
+    color = get_color(project.get("category", ""))
     return f"""
-    <a class="card" href="{url}" target="_blank">
-      <div class="card-thumb">
-        <img src="{thumb}" alt="{project['title']}" loading="lazy"
-             onerror="this.parentElement.classList.add('thumb-error'); this.style.display='none'"/>
-        <div class="thumb-fallback"><span>{project.get('category','')}</span></div>
-        <div class="card-num-overlay">{num_str}</div>
+    <a class="card" href="{project['url']}" target="_blank" style="--card-color: {color};">
+      <div class="card-header">
+        <span class="card-num">{num_str}</span>
+        <span class="card-cat">{project.get('category', '')}</span>
       </div>
-      <div class="card-body">
-        <div class="card-top">
-          <span class="card-cat">{project.get('category', '')}</span>
-        </div>
-        <div class="card-title">{project['title']}</div>
+      <div class="card-content">
+        <div class="card-num-bg">{num_str}</div>
+        <h3 class="card-title">{project['title']}</h3>
         {desc_html}
-        <div class="card-bottom">
-          <span class="card-link">Ver proyecto &nbsp;&#x2192;</span>
-        </div>
+      </div>
+      <div class="card-footer-row">
+        <span class="card-link">Ver proyecto &nbsp;&#x2192;</span>
       </div>
     </a>
     """
@@ -90,7 +101,9 @@ HTML = f"""<!DOCTYPE html>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600&family=Noto+Sans+JP:wght@300;400&display=swap" rel="stylesheet">
 <style>
+
 *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+
 :root {{
   --white: #ffffff;
   --black: #0d0d0d;
@@ -99,6 +112,7 @@ HTML = f"""<!DOCTYPE html>
   --muted: #999999;
   --small: 0.67rem;
 }}
+
 html, body {{
   background: var(--white);
   color: var(--black);
@@ -106,6 +120,8 @@ html, body {{
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
 }}
+
+/* ---- HEADER ---- */
 header {{
   display: flex;
   align-items: flex-end;
@@ -115,6 +131,7 @@ header {{
   flex-wrap: wrap;
   gap: 1.5rem;
 }}
+
 .site-name {{
   font-family: 'Shippori Mincho', serif;
   font-size: clamp(1.8rem, 3vw, 2.8rem);
@@ -122,6 +139,7 @@ header {{
   letter-spacing: -0.03em;
   line-height: 1;
 }}
+
 .site-sub {{
   font-size: var(--small);
   color: var(--muted);
@@ -129,7 +147,9 @@ header {{
   text-transform: uppercase;
   margin-top: 0.5rem;
 }}
+
 nav {{ display: flex; }}
+
 .nav-btn {{
   font-family: 'Noto Sans JP', sans-serif;
   font-size: var(--small);
@@ -145,7 +165,10 @@ nav {{ display: flex; }}
 }}
 .nav-btn.active {{ background: var(--black); color: var(--white); }}
 .nav-btn:not(.active):hover {{ background: var(--grey); }}
+
+/* ---- MAIN ---- */
 main {{ padding: 0 4rem 8rem; }}
+
 .panel-head {{
   display: flex;
   align-items: baseline;
@@ -156,17 +179,21 @@ main {{ padding: 0 4rem 8rem; }}
   flex-wrap: wrap;
   gap: 1rem;
 }}
+
 .panel-title {{
   font-family: 'Shippori Mincho', serif;
   font-size: clamp(1.3rem, 2vw, 1.8rem);
   font-weight: 500;
   letter-spacing: -0.02em;
 }}
+
 .panel-count {{
   font-size: var(--small);
   color: var(--muted);
   letter-spacing: 0.15em;
 }}
+
+/* ---- GRID ---- */
 .grid {{
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -174,97 +201,130 @@ main {{ padding: 0 4rem 8rem; }}
   background: var(--line);
   border: 1px solid var(--line);
 }}
+
+/* ---- CARD ---- */
 .card {{
   display: flex;
   flex-direction: column;
   background: var(--white);
   text-decoration: none;
   color: inherit;
-  transition: background 0.2s;
+  overflow: hidden;
   animation: fadeUp 0.5s ease both;
-  overflow: hidden;
+  transition: background 0.2s;
+  min-height: 240px;
 }}
-.card:hover {{ background: var(--grey); }}
-.card:hover .card-thumb img {{ transform: scale(1.03); }}
-.card-thumb {{
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  background: #efefef;
-  position: relative;
-  border-bottom: 1px solid var(--line);
+
+.card:hover {{
+  background: var(--card-color, #1a1a1a);
 }}
-.card-thumb img {{
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform 0.4s ease;
+
+.card:hover .card-num,
+.card:hover .card-cat,
+.card:hover .card-title,
+.card:hover .card-link,
+.card:hover .card-desc {{
+  color: rgba(255,255,255,0.9);
 }}
-.thumb-fallback {{
-  position: absolute;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  background: #efefef;
-  font-size: var(--small);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--muted);
+
+.card:hover .card-num-bg {{
+  color: rgba(255,255,255,0.06);
 }}
-.card-thumb.thumb-error .thumb-fallback {{ display: flex; }}
-.card-num-overlay {{
-  position: absolute;
-  top: 0.7rem;
-  left: 0.8rem;
-  font-size: 0.58rem;
-  letter-spacing: 0.2em;
-  color: var(--white);
-  background: rgba(0,0,0,0.45);
-  padding: 0.2rem 0.5rem;
-  backdrop-filter: blur(4px);
+
+.card:hover .card-cat {{
+  border-color: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08);
 }}
-.card-body {{
+
+.card:hover .card-footer-row {{
+  border-top-color: rgba(255,255,255,0.15);
+}}
+
+/* ---- CARD HEADER ---- */
+.card-header {{
   display: flex;
-  flex-direction: column;
-  padding: 1.5rem 1.8rem 1.4rem;
-  gap: 0.6rem;
-  flex: 1;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 1.6rem 0;
 }}
-.card-top {{ display: flex; justify-content: flex-end; }}
+
+.card-num {{
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  color: var(--muted);
+  transition: color 0.2s;
+}}
+
 .card-cat {{
-  font-size: 0.55rem;
+  font-size: 0.54rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
   background: var(--grey);
   padding: 0.18rem 0.5rem;
   border: 1px solid var(--line);
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
 }}
+
+/* ---- CARD CONTENT ---- */
+.card-content {{
+  flex: 1;
+  padding: 0.8rem 1.6rem 1rem;
+  position: relative;
+  overflow: hidden;
+}}
+
+.card-num-bg {{
+  position: absolute;
+  bottom: -1.5rem;
+  right: -0.5rem;
+  font-family: 'Shippori Mincho', serif;
+  font-size: 7rem;
+  font-weight: 600;
+  color: rgba(0,0,0,0.04);
+  line-height: 1;
+  pointer-events: none;
+  transition: color 0.2s;
+  user-select: none;
+}}
+
 .card-title {{
   font-family: 'Shippori Mincho', serif;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.4;
   letter-spacing: -0.01em;
+  position: relative;
+  z-index: 1;
+  transition: color 0.2s;
 }}
+
 .card-desc {{
   font-size: 0.73rem;
   line-height: 1.85;
   color: #777;
+  margin-top: 0.5rem;
+  position: relative;
+  z-index: 1;
+  transition: color 0.2s;
 }}
-.card-bottom {{
-  margin-top: auto;
-  padding-top: 0.9rem;
+
+/* ---- CARD FOOTER ---- */
+.card-footer-row {{
+  padding: 0.9rem 1.6rem 1.2rem;
   border-top: 1px solid var(--line);
+  transition: border-color 0.2s;
 }}
+
 .card-link {{
   font-size: 0.6rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--black);
+  transition: color 0.2s;
 }}
+
+/* ---- COMING SOON ---- */
 .coming-soon {{
   padding: 7rem 0;
   text-align: center;
@@ -288,6 +348,8 @@ main {{ padding: 0 4rem 8rem; }}
   color: var(--muted);
   margin-top: 0.8rem;
 }}
+
+/* ---- FOOTER ---- */
 footer {{
   border-top: 2px solid var(--black);
   padding: 1.4rem 4rem;
@@ -300,8 +362,12 @@ footer {{
   flex-wrap: wrap;
   gap: 0.5rem;
 }}
+
+/* ---- TOGGLE ---- */
 .panel {{ display: none; }}
 .panel.active {{ display: block; }}
+
+/* ---- ANIMATION ---- */
 @keyframes fadeUp {{
   from {{ opacity: 0; transform: translateY(12px); }}
   to   {{ opacity: 1; transform: translateY(0); }}
@@ -319,11 +385,13 @@ footer {{
 .card:nth-child(11) {{ animation-delay: 0.43s }}
 .card:nth-child(12) {{ animation-delay: 0.47s }}
 .card:nth-child(13) {{ animation-delay: 0.51s }}
+
 @media (max-width: 1100px) {{ .grid {{ grid-template-columns: repeat(2, 1fr); }} }}
 @media (max-width: 640px) {{
   .grid {{ grid-template-columns: 1fr; }}
   header, main, footer {{ padding-left: 1.5rem; padding-right: 1.5rem; }}
 }}
+
 </style>
 </head>
 <body>
@@ -370,4 +438,4 @@ document.getElementById('panel-1').classList.add('active');
 </body>
 </html>"""
 
-components.html(HTML, height=3200, scrolling=True)
+components.html(HTML, height=3000, scrolling=True)
