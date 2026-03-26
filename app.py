@@ -1,6 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import yaml
+import base64
 from pathlib import Path
 
 st.set_page_config(
@@ -25,19 +26,51 @@ def load_projects():
     with open(BASE_DIR / "projects.yaml", "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
+@st.cache_data
+def get_image_b64(img_path: Path) -> str:
+    with open(img_path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+
+def get_thumb(project_id: int) -> str:
+    for ext in ["png", "jpg", "jpeg", "webp"]:
+        img_path = BASE_DIR / "imagenes" / f"{project_id}.{ext}"
+        if img_path.exists():
+            b64 = get_image_b64(img_path)
+            mime = "jpeg" if ext in ["jpg", "jpeg"] else ext
+            return f"data:image/{mime};base64,{b64}"
+    return ""
+
 data = load_projects()
 
-def render_row(project, index):
+def render_card(project, index):
     num_str = str(index).zfill(2)
     desc = project.get("description", "")
-    desc_html = f'<span class="row-desc">{desc}</span>' if desc else ""
+    desc_html = f'<p class="card-desc">{desc}</p>' if desc else ""
+    thumb = get_thumb(project["id"])
+
+    if thumb:
+        img_html = f'<img src="{thumb}" alt="{project["title"]}" loading="lazy" />'
+        thumb_class = "card-thumb"
+    else:
+        img_html = f'<div class="thumb-placeholder"><span>{project.get("category","")}</span></div>'
+        thumb_class = "card-thumb no-image"
+
     return f"""
-    <a class="project-row" href="{project['url']}" target="_blank">
-      <span class="row-num">{num_str}</span>
-      <span class="row-title">{project['title']}</span>
-      <span class="row-cat">{project.get('category', '')}</span>
-      {desc_html}
-      <span class="row-arrow">&#x2192;</span>
+    <a class="card" href="{project['url']}" target="_blank">
+      <div class="{thumb_class}">
+        {img_html}
+        <div class="card-num-overlay">{num_str}</div>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="card-cat">{project.get('category', '')}</span>
+        </div>
+        <h3 class="card-title">{project['title']}</h3>
+        {desc_html}
+        <div class="card-footer-row">
+          <span class="card-link">Ver proyecto &nbsp;&#x2192;</span>
+        </div>
+      </div>
     </a>
     """
 
@@ -54,15 +87,8 @@ def render_panel(key, panel_id):
         </div>"""
         count = "sin proyectos aun"
     else:
-        rows = "".join(render_row(p, p["id"]) for p in projects)
-        content = f"""
-        <div class="list-header">
-          <span class="lh-num">#</span>
-          <span class="lh-title">Proyecto</span>
-          <span class="lh-cat">Categoria</span>
-          <span class="lh-arrow"></span>
-        </div>
-        <div class="project-list">{rows}</div>"""
+        cards = "".join(render_card(p, p["id"]) for p in projects)
+        content = f'<div class="grid">{cards}</div>'
         count = f"{len(projects)} proyectos"
     return f"""
     <div class="panel" id="{panel_id}">
@@ -91,7 +117,7 @@ HTML = f"""<!DOCTYPE html>
   --white: #ffffff;
   --black: #0d0d0d;
   --grey:  #f5f5f5;
-  --line:  #e0e0e0;
+  --line:  #c8c8c8;
   --muted: #999999;
   --small: 0.67rem;
 }}
@@ -104,12 +130,11 @@ html, body {{
   -webkit-font-smoothing: antialiased;
 }}
 
-/* ---- HEADER ---- */
 header {{
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  padding: 3rem 5rem 2.2rem;
+  padding: 3rem 4rem 2.2rem;
   border-bottom: 2px solid var(--black);
   flex-wrap: wrap;
   gap: 1.5rem;
@@ -149,8 +174,7 @@ nav {{ display: flex; }}
 .nav-btn.active {{ background: var(--black); color: var(--white); }}
 .nav-btn:not(.active):hover {{ background: var(--grey); }}
 
-/* ---- MAIN ---- */
-main {{ padding: 0 5rem 8rem; }}
+main {{ padding: 0 4rem 8rem; }}
 
 .panel-head {{
   display: flex;
@@ -158,7 +182,7 @@ main {{ padding: 0 5rem 8rem; }}
   justify-content: space-between;
   padding: 3.5rem 0 2.5rem;
   border-bottom: 1px solid var(--line);
-  margin-bottom: 0;
+  margin-bottom: 3rem;
   flex-wrap: wrap;
   gap: 1rem;
 }}
@@ -176,89 +200,139 @@ main {{ padding: 0 5rem 8rem; }}
   letter-spacing: 0.15em;
 }}
 
-/* ---- LIST HEADER ---- */
-.list-header {{
+/* ---- GRID ---- */
+.grid {{
   display: grid;
-  grid-template-columns: 3rem 1fr 14rem 2rem;
-  align-items: center;
-  padding: 0.7rem 1rem 0.7rem 0;
-  border-bottom: 1px solid var(--black);
-  gap: 1rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
 }}
 
-.lh-num, .lh-title, .lh-cat {{
+/* ---- CARD ---- */
+.card {{
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+  text-decoration: none;
+  color: inherit;
+  overflow: hidden;
+  animation: fadeUp 0.5s ease both;
+  transition: background 0.2s;
+}}
+
+.card:hover {{ background: var(--grey); }}
+.card:hover .card-thumb img {{ transform: scale(1.03); }}
+.card:hover .card-link {{ letter-spacing: 0.2em; }}
+
+/* ---- THUMBNAIL ---- */
+.card-thumb {{
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #efefef;
+  position: relative;
+  border-bottom: 1px solid var(--line);
+}}
+
+.card-thumb img {{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+  display: block;
+  transition: transform 0.4s ease;
+}}
+
+/* Placeholder cuando no hay imagen */
+.card-thumb.no-image {{
+  background: #f0f0f0;
+}}
+
+.thumb-placeholder {{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: repeating-linear-gradient(
+    45deg,
+    #f5f5f5,
+    #f5f5f5 10px,
+    #ebebeb 10px,
+    #ebebeb 20px
+  );
+}}
+
+.thumb-placeholder span {{
   font-size: 0.58rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: #bbb;
+  background: white;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #ddd;
 }}
 
-/* ---- PROJECT LIST ---- */
-.project-list {{
+.card-num-overlay {{
+  position: absolute;
+  top: 0.7rem;
+  left: 0.8rem;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  color: var(--white);
+  background: rgba(0,0,0,0.5);
+  padding: 0.2rem 0.5rem;
+  backdrop-filter: blur(4px);
+}}
+
+/* ---- CARD BODY ---- */
+.card-body {{
   display: flex;
   flex-direction: column;
+  padding: 1.4rem 1.6rem 1.3rem;
+  gap: 0.5rem;
+  flex: 1;
 }}
 
-/* ---- PROJECT ROW ---- */
-.project-row {{
-  display: grid;
-  grid-template-columns: 3rem 1fr 14rem 2rem;
-  align-items: center;
-  gap: 1rem;
-  padding: 1.4rem 1rem 1.4rem 0;
-  border-bottom: 1px solid var(--line);
-  text-decoration: none;
-  color: inherit;
-  transition: background 0.15s, padding-left 0.15s;
-  cursor: pointer;
-  animation: fadeUp 0.4s ease both;
-}}
+.card-top {{ display: flex; justify-content: flex-end; }}
 
-.project-row:hover {{
-  background: var(--grey);
-  padding-left: 1rem;
-}}
-
-.project-row:hover .row-arrow {{
-  transform: translateX(5px);
-  color: var(--black);
-}}
-
-.row-num {{
-  font-size: 0.62rem;
-  color: var(--muted);
-  letter-spacing: 0.18em;
-  font-family: 'Noto Sans JP', monospace;
-}}
-
-.row-title {{
-  font-family: 'Shippori Mincho', serif;
-  font-size: 1.05rem;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-  line-height: 1.3;
-}}
-
-.row-cat {{
-  font-size: 0.58rem;
+.card-cat {{
+  font-size: 0.54rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
   background: var(--grey);
-  padding: 0.22rem 0.6rem;
+  padding: 0.18rem 0.5rem;
   border: 1px solid var(--line);
-  justify-self: start;
 }}
 
-.row-desc {{
-  display: none;
+.card-title {{
+  font-family: 'Shippori Mincho', serif;
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
 }}
 
-.row-arrow {{
-  font-size: 0.9rem;
-  color: #ccc;
-  transition: transform 0.2s, color 0.2s;
-  justify-self: end;
+.card-desc {{
+  font-size: 0.73rem;
+  line-height: 1.85;
+  color: #777;
+}}
+
+.card-footer-row {{
+  margin-top: auto;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}}
+
+.card-link {{
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--black);
+  transition: letter-spacing 0.2s;
 }}
 
 /* ---- COMING SOON ---- */
@@ -266,7 +340,6 @@ main {{ padding: 0 5rem 8rem; }}
   padding: 7rem 0;
   text-align: center;
   border: 1px solid var(--line);
-  margin-top: 3rem;
 }}
 .cs-label {{
   font-size: var(--small);
@@ -287,10 +360,9 @@ main {{ padding: 0 5rem 8rem; }}
   margin-top: 0.8rem;
 }}
 
-/* ---- FOOTER ---- */
 footer {{
   border-top: 2px solid var(--black);
-  padding: 1.4rem 5rem;
+  padding: 1.4rem 4rem;
   display: flex;
   justify-content: space-between;
   font-size: 0.6rem;
@@ -301,36 +373,30 @@ footer {{
   gap: 0.5rem;
 }}
 
-/* ---- TOGGLE ---- */
 .panel {{ display: none; }}
 .panel.active {{ display: block; }}
 
-/* ---- ANIMATION ---- */
 @keyframes fadeUp {{
-  from {{ opacity: 0; transform: translateY(8px); }}
+  from {{ opacity: 0; transform: translateY(12px); }}
   to   {{ opacity: 1; transform: translateY(0); }}
 }}
+.card:nth-child(1)  {{ animation-delay: 0.03s }}
+.card:nth-child(2)  {{ animation-delay: 0.07s }}
+.card:nth-child(3)  {{ animation-delay: 0.11s }}
+.card:nth-child(4)  {{ animation-delay: 0.15s }}
+.card:nth-child(5)  {{ animation-delay: 0.19s }}
+.card:nth-child(6)  {{ animation-delay: 0.23s }}
+.card:nth-child(7)  {{ animation-delay: 0.27s }}
+.card:nth-child(8)  {{ animation-delay: 0.31s }}
+.card:nth-child(9)  {{ animation-delay: 0.35s }}
+.card:nth-child(10) {{ animation-delay: 0.39s }}
+.card:nth-child(11) {{ animation-delay: 0.43s }}
+.card:nth-child(12) {{ animation-delay: 0.47s }}
+.card:nth-child(13) {{ animation-delay: 0.51s }}
 
-.project-row:nth-child(1)  {{ animation-delay: 0.03s }}
-.project-row:nth-child(2)  {{ animation-delay: 0.06s }}
-.project-row:nth-child(3)  {{ animation-delay: 0.09s }}
-.project-row:nth-child(4)  {{ animation-delay: 0.12s }}
-.project-row:nth-child(5)  {{ animation-delay: 0.15s }}
-.project-row:nth-child(6)  {{ animation-delay: 0.18s }}
-.project-row:nth-child(7)  {{ animation-delay: 0.21s }}
-.project-row:nth-child(8)  {{ animation-delay: 0.24s }}
-.project-row:nth-child(9)  {{ animation-delay: 0.27s }}
-.project-row:nth-child(10) {{ animation-delay: 0.30s }}
-.project-row:nth-child(11) {{ animation-delay: 0.33s }}
-.project-row:nth-child(12) {{ animation-delay: 0.36s }}
-.project-row:nth-child(13) {{ animation-delay: 0.39s }}
-
-/* ---- RESPONSIVE ---- */
-@media (max-width: 768px) {{
-  .list-header {{ grid-template-columns: 2.5rem 1fr 2rem; }}
-  .list-header .lh-cat {{ display: none; }}
-  .project-row {{ grid-template-columns: 2.5rem 1fr 2rem; }}
-  .row-cat {{ display: none; }}
+@media (max-width: 1100px) {{ .grid {{ grid-template-columns: repeat(2, 1fr); }} }}
+@media (max-width: 640px) {{
+  .grid {{ grid-template-columns: 1fr; }}
   header, main, footer {{ padding-left: 1.5rem; padding-right: 1.5rem; }}
 }}
 
@@ -366,12 +432,12 @@ function switchPanel(num, btn) {{
   var panel = document.getElementById('panel-' + num);
   if (panel) panel.classList.add('active');
   btn.classList.add('active');
-  var rows = document.querySelectorAll('#panel-' + num + ' .project-row');
-  rows.forEach(function(row, i) {{
-    row.style.animation = 'none';
-    void row.offsetHeight;
-    row.style.animation = '';
-    row.style.animationDelay = (i * 0.03 + 0.03) + 's';
+  var cards = document.querySelectorAll('#panel-' + num + ' .card');
+  cards.forEach(function(card, i) {{
+    card.style.animation = 'none';
+    void card.offsetHeight;
+    card.style.animation = '';
+    card.style.animationDelay = (i * 0.04 + 0.03) + 's';
   }});
 }}
 document.getElementById('panel-1').classList.add('active');
@@ -380,4 +446,4 @@ document.getElementById('panel-1').classList.add('active');
 </body>
 </html>"""
 
-components.html(HTML, height=1400, scrolling=True)
+components.html(HTML, height=3200, scrolling=True)
