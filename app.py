@@ -15,7 +15,7 @@ st.markdown("""
 <style>
   #MainMenu, header, footer { visibility: hidden; }
   .block-container { padding: 0 !important; max-width: 100% !important; }
-  [data-testid="stAppViewContainer"] { background: #fff; }
+  [data-testid="stAppViewContainer"] { background: #f9f7f4; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -27,18 +27,31 @@ def load_projects():
         return yaml.safe_load(f)
 
 @st.cache_data
-def get_image_b64(img_path: Path) -> str:
-    with open(img_path, "rb") as f:
+def get_image_b64(img_path_str: str) -> str:
+    with open(img_path_str, "rb") as f:
         return base64.b64encode(f.read()).decode()
 
 def get_thumb(project_id: int) -> str:
     for ext in ["png", "jpg", "jpeg", "webp"]:
         img_path = BASE_DIR / "imagenes" / f"{project_id}.{ext}"
         if img_path.exists():
-            b64 = get_image_b64(img_path)
+            b64 = get_image_b64(str(img_path))
             mime = "jpeg" if ext in ["jpg", "jpeg"] else ext
             return f"data:image/{mime};base64,{b64}"
     return ""
+
+# Color palette per category — pastel accent + dark text
+CATEGORY_STYLE = {
+    "Computer Vision":   ("hsl(210,85%,92%)", "hsl(210,60%,35%)"),
+    "Text Analysis":     ("hsl(150,65%,88%)", "hsl(150,50%,28%)"),
+    "Translation":       ("hsl(280,70%,92%)", "hsl(280,50%,35%)"),
+    "Machine Learning":  ("hsl(25,90%,90%)",  "hsl(25,65%,35%)"),
+    "NLP":               ("hsl(185,70%,88%)", "hsl(185,55%,28%)"),
+    "Sentiment Analysis":("hsl(340,75%,92%)", "hsl(340,55%,35%)"),
+    "OCR":               ("hsl(55,85%,88%)",  "hsl(55,60%,30%)"),
+    "Data Analysis":     ("hsl(115,65%,88%)", "hsl(115,50%,28%)"),
+    "Streamlit":         ("hsl(0,75%,90%)",   "hsl(0,55%,35%)"),
+}
 
 data = load_projects()
 
@@ -47,29 +60,30 @@ def render_card(project, index):
     desc = project.get("description", "")
     desc_html = f'<p class="card-desc">{desc}</p>' if desc else ""
     thumb = get_thumb(project["id"])
+    cat = project.get("category", "")
+    bg, fg = CATEGORY_STYLE.get(cat, ("hsl(220,15%,90%)", "hsl(220,15%,35%)"))
 
     if thumb:
-        img_html = f'<img src="{thumb}" alt="{project["title"]}" loading="lazy" />'
-        thumb_class = "card-thumb"
+        media_html = f"""
+        <div class="card-media">
+          <img src="{thumb}" alt="{project['title']}" loading="lazy"/>
+          <div class="card-badge" style="background:{bg};color:{fg}">{cat}</div>
+        </div>"""
     else:
-        img_html = f'<div class="thumb-placeholder"><span>{project.get("category","")}</span></div>'
-        thumb_class = "card-thumb no-image"
+        media_html = f"""
+        <div class="card-media no-img" style="background:{bg}">
+          <span class="placeholder-num" style="color:{fg}">{num_str}</span>
+          <div class="card-badge" style="background:white;color:{fg}">{cat}</div>
+        </div>"""
 
     return f"""
     <a class="card" href="{project['url']}" target="_blank">
-      <div class="{thumb_class}">
-        {img_html}
-        <div class="card-num-overlay">{num_str}</div>
-      </div>
+      {media_html}
       <div class="card-body">
-        <div class="card-top">
-          <span class="card-cat">{project.get('category', '')}</span>
-        </div>
+        <p class="card-num">Proyecto {num_str}</p>
         <h3 class="card-title">{project['title']}</h3>
         {desc_html}
-        <div class="card-footer-row">
-          <span class="card-link">Ver proyecto &nbsp;&#x2192;</span>
-        </div>
+        <span class="card-cta">Ver proyecto <span class="arrow">&#x2192;</span></span>
       </div>
     </a>
     """
@@ -79,13 +93,8 @@ def render_panel(key, panel_id):
     projects  = portfolio.get("projects", [])
     title     = portfolio.get("title", "")
     if not projects:
-        content = """
-        <div class="coming-soon">
-          <p class="cs-label">proximamente</p>
-          <p class="cs-title">Portafolio 2</p>
-          <p class="cs-sub">Los proyectos se agregaran durante el semestre.</p>
-        </div>"""
-        count = "sin proyectos aun"
+        content = '<div class="coming-soon"><p class="cs-title">Portafolio 2</p><p class="cs-sub">Proyectos proximamente...</p></div>'
+        count = ""
     else:
         cards = "".join(render_card(p, p["id"]) for p in projects)
         content = f'<div class="grid">{cards}</div>'
@@ -94,7 +103,7 @@ def render_panel(key, panel_id):
     <div class="panel" id="{panel_id}">
       <div class="panel-head">
         <h2 class="panel-title">{title}</h2>
-        <span class="panel-count">{count}</span>
+        {f'<span class="panel-count">{count}</span>' if count else ''}
       </div>
       {content}
     </div>"""
@@ -108,134 +117,176 @@ HTML = f"""<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600&family=Noto+Sans+JP:wght@300;400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <style>
 
 *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
 
 :root {{
-  --white: #ffffff;
-  --black: #0d0d0d;
-  --grey:  #f5f5f5;
-  --line:  #c8c8c8;
-  --muted: #999999;
-  --small: 0.67rem;
+  --cream: #f9f7f4;
+  --black: #111;
+  --mid:   #555;
+  --line:  #e0ddd8;
+  --white: #fff;
+  --radius: 16px;
 }}
 
 html, body {{
-  background: var(--white);
+  background: var(--cream);
   color: var(--black);
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
 }}
 
+/* ---- HEADER ---- */
 header {{
+  padding: 2.8rem 5rem 2rem;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  padding: 3rem 4rem 2.2rem;
-  border-bottom: 2px solid var(--black);
   flex-wrap: wrap;
   gap: 1.5rem;
+  border-bottom: 1.5px solid var(--line);
+  background: var(--white);
+}}
+
+.header-left {{}}
+
+.site-eyebrow {{
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--mid);
+  margin-bottom: 0.4rem;
 }}
 
 .site-name {{
-  font-family: 'Shippori Mincho', serif;
-  font-size: clamp(1.8rem, 3vw, 2.8rem);
-  font-weight: 500;
-  letter-spacing: -0.03em;
+  font-family: 'Fraunces', serif;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
   line-height: 1;
+  color: var(--black);
 }}
 
-.site-sub {{
-  font-size: var(--small);
-  color: var(--muted);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  margin-top: 0.5rem;
+.site-name em {{
+  font-style: italic;
+  font-weight: 300;
 }}
 
-nav {{ display: flex; }}
+/* ---- NAV ---- */
+nav {{
+  display: flex;
+  background: var(--cream);
+  border: 1.5px solid var(--line);
+  border-radius: 40px;
+  padding: 4px;
+  gap: 4px;
+}}
 
 .nav-btn {{
-  font-family: 'Noto Sans JP', sans-serif;
-  font-size: var(--small);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  padding: 0.55rem 1.6rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  padding: 0.5rem 1.4rem;
   cursor: pointer;
-  border: 1px solid var(--black);
-  background: var(--white);
-  color: var(--black);
-  transition: all 0.2s;
-  margin-left: -1px;
+  border: none;
+  background: transparent;
+  color: var(--mid);
+  border-radius: 30px;
+  transition: all 0.22s ease;
+  white-space: nowrap;
 }}
-.nav-btn.active {{ background: var(--black); color: var(--white); }}
-.nav-btn:not(.active):hover {{ background: var(--grey); }}
 
-main {{ padding: 0 4rem 8rem; }}
+.nav-btn.active {{
+  background: var(--black);
+  color: var(--white);
+}}
 
+.nav-btn:not(.active):hover {{
+  background: var(--line);
+  color: var(--black);
+}}
+
+/* ---- MAIN ---- */
+main {{
+  padding: 0 5rem 8rem;
+  max-width: 1440px;
+  margin: 0 auto;
+}}
+
+/* ---- PANEL HEAD ---- */
 .panel-head {{
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 3.5rem 0 2.5rem;
-  border-bottom: 1px solid var(--line);
+  padding: 3rem 0 2.5rem;
+  border-bottom: 1.5px solid var(--line);
   margin-bottom: 3rem;
-  flex-wrap: wrap;
   gap: 1rem;
+  flex-wrap: wrap;
 }}
 
 .panel-title {{
-  font-family: 'Shippori Mincho', serif;
-  font-size: clamp(1.3rem, 2vw, 1.8rem);
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-family: 'Fraunces', serif;
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }}
 
 .panel-count {{
-  font-size: var(--small);
-  color: var(--muted);
-  letter-spacing: 0.15em;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mid);
+  background: var(--line);
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
 }}
 
 /* ---- GRID ---- */
 .grid {{
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: var(--line);
-  border: 1px solid var(--line);
+  gap: 1.5rem;
 }}
 
 /* ---- CARD ---- */
 .card {{
-  display: flex;
-  flex-direction: column;
   background: var(--white);
+  border-radius: var(--radius);
+  border: 1.5px solid var(--line);
   text-decoration: none;
   color: inherit;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
   animation: fadeUp 0.5s ease both;
-  transition: background 0.2s;
 }}
 
-.card:hover {{ background: var(--grey); }}
-.card:hover .card-thumb img {{ transform: scale(1.03); }}
-.card:hover .card-link {{ letter-spacing: 0.2em; }}
+.card:hover {{
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+  border-color: #bbb;
+}}
 
-/* ---- THUMBNAIL ---- */
-.card-thumb {{
+.card:hover .arrow {{
+  transform: translate(3px, -3px);
+}}
+
+/* ---- CARD MEDIA ---- */
+.card-media {{
   width: 100%;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: #efefef;
   position: relative;
-  border-bottom: 1px solid var(--line);
+  background: #f0ede8;
 }}
 
-.card-thumb img {{
+.card-media img {{
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -244,142 +295,138 @@ main {{ padding: 0 4rem 8rem; }}
   transition: transform 0.4s ease;
 }}
 
-/* Placeholder cuando no hay imagen */
-.card-thumb.no-image {{
-  background: #f0f0f0;
+.card:hover .card-media img {{
+  transform: scale(1.04);
 }}
 
-.thumb-placeholder {{
-  width: 100%;
-  height: 100%;
+.card-media.no-img {{
   display: flex;
   align-items: center;
   justify-content: center;
-  background: repeating-linear-gradient(
-    45deg,
-    #f5f5f5,
-    #f5f5f5 10px,
-    #ebebeb 10px,
-    #ebebeb 20px
-  );
 }}
 
-.thumb-placeholder span {{
-  font-size: 0.58rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: #bbb;
-  background: white;
-  padding: 0.3rem 0.7rem;
-  border: 1px solid #ddd;
+.placeholder-num {{
+  font-family: 'Fraunces', serif;
+  font-size: 5rem;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  opacity: 0.25;
+  line-height: 1;
 }}
 
-.card-num-overlay {{
+.card-badge {{
   position: absolute;
-  top: 0.7rem;
+  bottom: 0.7rem;
   left: 0.8rem;
   font-size: 0.58rem;
-  letter-spacing: 0.2em;
-  color: var(--white);
-  background: rgba(0,0,0,0.5);
-  padding: 0.2rem 0.5rem;
-  backdrop-filter: blur(4px);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.65rem;
+  border-radius: 20px;
+  backdrop-filter: blur(6px);
 }}
 
 /* ---- CARD BODY ---- */
 .card-body {{
+  padding: 1.4rem 1.6rem 1.5rem;
   display: flex;
   flex-direction: column;
-  padding: 1.4rem 1.6rem 1.3rem;
-  gap: 0.5rem;
+  gap: 0.4rem;
   flex: 1;
 }}
 
-.card-top {{ display: flex; justify-content: flex-end; }}
-
-.card-cat {{
-  font-size: 0.54rem;
-  letter-spacing: 0.12em;
+.card-num {{
+  font-size: 0.62rem;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--muted);
-  background: var(--grey);
-  padding: 0.18rem 0.5rem;
-  border: 1px solid var(--line);
+  color: var(--mid);
 }}
 
 .card-title {{
-  font-family: 'Shippori Mincho', serif;
+  font-family: 'Fraunces', serif;
   font-size: 1.05rem;
-  font-weight: 500;
+  font-weight: 700;
   line-height: 1.35;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  color: var(--black);
 }}
 
 .card-desc {{
-  font-size: 0.73rem;
-  line-height: 1.85;
-  color: #777;
+  font-size: 0.78rem;
+  line-height: 1.75;
+  color: var(--mid);
+  margin-top: 0.2rem;
 }}
 
-.card-footer-row {{
+.card-cta {{
   margin-top: auto;
-  padding-top: 0.9rem;
+  padding-top: 1rem;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--black);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   border-top: 1px solid var(--line);
 }}
 
-.card-link {{
-  font-size: 0.6rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--black);
-  transition: letter-spacing 0.2s;
+.arrow {{
+  display: inline-block;
+  transition: transform 0.2s ease;
 }}
 
 /* ---- COMING SOON ---- */
 .coming-soon {{
-  padding: 7rem 0;
+  padding: 6rem 2rem;
   text-align: center;
-  border: 1px solid var(--line);
+  border: 2px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--white);
 }}
-.cs-label {{
-  font-size: var(--small);
-  letter-spacing: 0.25em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 1.2rem;
-}}
+
 .cs-title {{
-  font-family: 'Shippori Mincho', serif;
-  font-size: clamp(2.5rem, 6vw, 5rem);
+  font-family: 'Fraunces', serif;
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 300;
+  font-style: italic;
   color: var(--line);
   letter-spacing: -0.03em;
 }}
+
 .cs-sub {{
-  font-size: 0.74rem;
-  color: var(--muted);
+  font-size: 0.78rem;
+  color: var(--mid);
   margin-top: 0.8rem;
 }}
 
+/* ---- FOOTER ---- */
 footer {{
-  border-top: 2px solid var(--black);
-  padding: 1.4rem 4rem;
+  border-top: 1.5px solid var(--line);
+  padding: 1.5rem 5rem;
   display: flex;
   justify-content: space-between;
-  font-size: 0.6rem;
-  letter-spacing: 0.15em;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--mid);
+  background: var(--white);
   flex-wrap: wrap;
   gap: 0.5rem;
 }}
 
+/* ---- TOGGLE ---- */
 .panel {{ display: none; }}
 .panel.active {{ display: block; }}
 
+/* ---- ANIMATION ---- */
 @keyframes fadeUp {{
-  from {{ opacity: 0; transform: translateY(12px); }}
+  from {{ opacity: 0; transform: translateY(16px); }}
   to   {{ opacity: 1; transform: translateY(0); }}
 }}
+
 .card:nth-child(1)  {{ animation-delay: 0.03s }}
 .card:nth-child(2)  {{ animation-delay: 0.07s }}
 .card:nth-child(3)  {{ animation-delay: 0.11s }}
@@ -394,6 +441,7 @@ footer {{
 .card:nth-child(12) {{ animation-delay: 0.47s }}
 .card:nth-child(13) {{ animation-delay: 0.51s }}
 
+/* ---- RESPONSIVE ---- */
 @media (max-width: 1100px) {{ .grid {{ grid-template-columns: repeat(2, 1fr); }} }}
 @media (max-width: 640px) {{
   .grid {{ grid-template-columns: 1fr; }}
@@ -405,9 +453,9 @@ footer {{
 <body>
 
 <header>
-  <div>
-    <div class="site-name">Santiago Marin Vargas</div>
-    <div class="site-sub">Creacion de Interfaces &nbsp;&middot;&nbsp; Portafolio</div>
+  <div class="header-left">
+    <p class="site-eyebrow">Creacion de Interfaces &nbsp;&middot;&nbsp; Portafolio</p>
+    <div class="site-name">Santiago <em>Marin</em> Vargas</div>
   </div>
   <nav>
     <button class="nav-btn active" onclick="switchPanel(1, this)">Portafolio 1</button>
