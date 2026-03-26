@@ -455,7 +455,7 @@ footer {{
 <header>
   <div class="header-left">
     <p class="site-eyebrow">Creacion de Interfaces &nbsp;&middot;&nbsp; Portafolio</p>
-    <div class="site-name">Santiago <em>Marin</em> Vargas</div>
+    <div class="site-name">Santiago Marin Vargas</div>
   </div>
   <nav>
     <button class="nav-btn active" onclick="switchPanel(1, this)">Portafolio 1</button>
