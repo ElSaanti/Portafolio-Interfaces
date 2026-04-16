@@ -81,7 +81,7 @@ portfolio_1:
 
 portfolio_2:
   title: "Portafolio 2"
-  projects: []
+  projects: 
     - id: 1
       title: "Chatea con tu PDF"
       description: ""
