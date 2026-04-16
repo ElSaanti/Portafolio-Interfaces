@@ -82,8 +82,14 @@ portfolio_1:
 portfolio_2:
   title: "Portafolio 2"
   projects: []
-      - id: 14
+    - id: 1
       title: "Chatea con tu PDF"
       description: ""
       url: "https://chatpdf-zntyd53ubf624agzxesnuj.streamlit.app/"
       category: "Chat"
+
+     - id: 2
+      title: "VisionAPP"
+      description: ""
+      url: "https://visionapp-pn398jtposwkkcvsjecoip.streamlit.app/"
+      category: "Vision"
