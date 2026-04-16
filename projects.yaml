@@ -93,3 +93,27 @@ portfolio_2:
       description: ""
       url: "https://visionapp-pn398jtposwkkcvsjecoip.streamlit.app/"
       category: "Vision"
+      
+    - id: 3
+      title: "Canvas personal"
+      description: ""
+      url: "https://tablero-smuegwqwafrted4e27euyz.streamlit.app/"
+      category: "Canva"
+
+    - id: 4
+      title: "Reconocimiento de digitos"
+      description: ""
+      url: "https://handw3.streamlit.app/"
+      category: "Reconocimiento"
+      
+    - id: 5
+      title: "Canvas calculadora"
+      description: ""
+      url: "https://drawrecog-jfv3wtmnazxs8fxduwepzs.streamlit.app/"
+      category: "Canva"
+
+    - id: 6
+      title: "Historia creativa con imagenes"
+      description: ""
+      url: "https://histinf-rnihgzlfbvkwxnlxhwf8hj.streamlit.app/"
+      category: "IA "
