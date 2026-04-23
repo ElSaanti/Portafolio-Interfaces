@@ -117,3 +117,21 @@ portfolio_2:
       description: ""
       url: "https://histinf-rnihgzlfbvkwxnlxhwf8hj.streamlit.app/"
       category: "IA "
+
+      - id: 20
+      title: "Control por voz"
+      description: ""
+      url: "https://ctrlvoice-efvrfrfetxpzbqoaquyvyf.streamlit.app/"
+      category: "Voz "
+
+      - id: 21
+      title: "MQTT Control"
+      description: ""
+      url: "https://sendcmqtt-cmxzecqgeybljcztbddkej.streamlit.app/"
+      category: "MQTT "
+
+      - id: 22
+      title: "Control por voz"
+      description: ""
+      url: "https://recepmqt.streamlit.app/"
+      category: "Lector MQTT"
